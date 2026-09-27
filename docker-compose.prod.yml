@@ -1,0 +1,80 @@
+# Production stack: compiled API + static admin/web served by nginx.
+#   cp .env.production.example .env.production   # then edit secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Web   → http://localhost:${WEB_PORT:-8080}
+# Admin → http://localhost:${ADMIN_PORT:-8081}
+# Only the two nginx containers publish ports; the API and MongoDB stay on the private network.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping").ok']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: barbershop-api:latest
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-barbershop}
+      CORS_ORIGINS: ${PUBLIC_WEB_URL},${PUBLIC_ADMIN_URL}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env.production}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_CURRENCY: ${CURRENCY:-INR}
+        VITE_LOCALE: ${LOCALE:-en-IN}
+        VITE_SHOP_NAME: ${SHOP_NAME:-}
+        VITE_SHOP_TAGLINE: ${SHOP_TAGLINE:-}
+        VITE_SHOP_PHONE: ${SHOP_PHONE:-}
+        VITE_SHOP_EMAIL: ${SHOP_EMAIL:-}
+        VITE_SHOP_ADDRESS: ${SHOP_ADDRESS:-}
+        VITE_SHOP_MAPS_URL: ${SHOP_MAPS_URL:-}
+        VITE_SHOP_INSTAGRAM: ${SHOP_INSTAGRAM:-}
+        VITE_SHOP_HOURS: ${SHOP_HOURS:-}
+    image: barbershop-web:latest
+    restart: always
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_CURRENCY: ${CURRENCY:-INR}
+        VITE_LOCALE: ${LOCALE:-en-IN}
+        VITE_WEBSITE_URL: ${PUBLIC_WEB_URL}
+    image: barbershop-admin:latest
+    restart: always
+    ports:
+      - '${ADMIN_PORT:-8081}:80'
+    depends_on:
+      - api
+
+volumes:
+  mongo_data:

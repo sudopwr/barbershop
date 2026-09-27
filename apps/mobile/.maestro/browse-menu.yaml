@@ -1,0 +1,26 @@
+appId: ${APP_ID || 'com.example.barbershop'}
+name: Browse the menu
+tags: [smoke]
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: 'Look sharp.*'
+    timeout: 15000
+- tapOn:
+    id: cta-menu
+- assertVisible: 'Services & prices'
+- assertVisible:
+    id: menu-list
+# Filter by category, then search
+- tapOn:
+    id: 'chip-.*'
+    index: 0
+- tapOn:
+    id: chip-all
+- tapOn:
+    id: menu-search
+- inputText: 'zzzz-no-match'
+- assertVisible: 'No services match.*'
+- eraseText: 20
+- hideKeyboard

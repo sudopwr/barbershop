@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install  # switch to `npm ci` once package-lock.json is committed
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: API unit + e2e tests (real MongoDB)
+        run: npm run test -w apps/api
+        env:
+          E2E_MONGO_URL: mongodb://localhost:27017
+      - name: Admin + web component tests
+        run: npm run test -w apps/admin -w apps/web
+      - run: npm run build
+
+  browser-e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start dev stack
+        run: docker compose up -d --build --wait mongo api admin web || (docker compose logs && exit 1)
+      - name: Install Playwright
+        run: |
+          npm install -w e2e
+          npx -w e2e playwright install --with-deps chromium
+      - name: Wait for apps
+        run: |
+          for url in http://localhost:4000/api/health http://localhost:3039 http://localhost:5173; do
+            timeout 120 bash -c "until curl -sf $url > /dev/null; do sleep 2; done"
+          done
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report

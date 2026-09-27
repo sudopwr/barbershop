@@ -1,0 +1,12 @@
+# Maestro end-to-end flows. Run against an installed build (EAS "development"
+# or "preview" profile) with the API running and demo data seeded:
+#   maestro test .maestro
+# Override the app id with: maestro test -e APP_ID=host.exp.exponent .maestro  (Expo Go)
+flows:
+  - '*.yaml'
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - browse-menu
+    - service-details
+    - visit-info

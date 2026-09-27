@@ -1,0 +1,13 @@
+appId: ${APP_ID || 'com.example.barbershop'}
+name: Opening hours and contact
+---
+- launchApp
+- tapOn:
+    id: tab-visit
+- assertVisible: 'Opening hours'
+- assertVisible: 'Get directions'
+- scrollUntilVisible:
+    element: 'Call .*'
+    direction: DOWN
+# The app never asks visitors to sign in or register
+- assertNotVisible: '(?i).*(sign in|sign up|register|log in).*'

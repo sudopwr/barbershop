@@ -1,0 +1,20 @@
+appId: ${APP_ID || 'com.example.barbershop'}
+name: Open a service
+---
+- launchApp
+- tapOn:
+    id: tab-menu
+- extendedWaitUntil:
+    visible:
+      id: 'service-.*'
+    timeout: 15000
+- tapOn:
+    id: 'service-.*'
+    index: 0
+- assertVisible:
+    id: service-name
+- assertVisible:
+    id: service-price
+- assertVisible: 'Call the shop'
+- back
+- assertVisible: 'Services & prices'

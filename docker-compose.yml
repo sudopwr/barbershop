@@ -1,0 +1,79 @@
+# Development stack: hot reload for API, admin and web.
+#   docker compose up --build
+# Admin  → http://localhost:3039   (login: ADMIN_USERNAME / ADMIN_PASSWORD below)
+# Web    → http://localhost:5173
+# API    → http://localhost:4000/api  (Swagger UI at /api/docs)
+
+x-dev-app: &dev-app
+  build:
+    context: .
+    dockerfile: docker/dev.Dockerfile
+  image: barbershop-dev
+  working_dir: /app
+  volumes:
+    - .:/app
+    # Keep the container's node_modules (Linux binaries) instead of the host's
+    - node_modules:/app/node_modules
+  environment: &dev-env
+    CHOKIDAR_USEPOLLING: 'true'
+    VITE_USE_POLLING: 'true'
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping").ok']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    <<: *dev-app
+    command: npm run dev -w apps/api
+    ports:
+      - '4000:4000'
+    environment:
+      <<: *dev-env
+      NODE_ENV: development
+      PORT: 4000
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB_NAME: barbershop
+      CORS_ORIGINS: http://localhost:3039,http://localhost:5173
+      JWT_SECRET: dev-only-secret-change-me-dev-only-secret-change-me
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: Admin@12345
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  admin:
+    <<: *dev-app
+    command: npm run dev -w apps/admin
+    ports:
+      - '3039:3039'
+    environment:
+      <<: *dev-env
+      API_PROXY_TARGET: http://api:4000
+      VITE_WEBSITE_URL: http://localhost:5173
+    depends_on:
+      - api
+
+  web:
+    <<: *dev-app
+    command: npm run dev -w apps/web
+    ports:
+      - '5173:5173'
+    environment:
+      <<: *dev-env
+      API_PROXY_TARGET: http://api:4000
+    depends_on:
+      - api
+
+volumes:
+  mongo_data:
+  node_modules:

@@ -1,0 +1,30 @@
+{
+  "name": "barbershop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Barber shop boilerplate: Fastify + MongoDB API, React + MUI admin panel and landing page, Expo React Native app",
+  "workspaces": [
+    "apps/api",
+    "apps/admin",
+    "apps/web",
+    "e2e"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:admin": "npm run dev -w apps/admin",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/api -w apps/admin -w apps/web",
+    "lint": "npm run lint -w apps/api -w apps/admin -w apps/web",
+    "typecheck": "npm run typecheck -w apps/api -w apps/admin -w apps/web",
+    "test": "npm run test -w apps/api -w apps/admin -w apps/web",
+    "test:unit": "npm run test:unit -w apps/api && npm run test -w apps/admin -w apps/web",
+    "test:e2e:api": "npm run test:e2e -w apps/api",
+    "test:e2e": "npm run test -w e2e",
+    "seed:demo": "npm run seed:demo -w apps/api",
+    "dev:mobile": "npm start --prefix apps/mobile",
+    "test:mobile": "npm test --prefix apps/mobile"
+  }
+}
